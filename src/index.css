@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Chat UI Design System - Modern, clean chat interface 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Base colors - Clean and modern */
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    
+    /* Chat specific colors */
+    --chat-background: 0 0% 99%;
+    --chat-sidebar: 0 0% 97%;
+    --chat-message-user: 217 91% 60%;
+    --chat-message-user-foreground: 0 0% 100%;
+    --chat-message-assistant: 0 0% 96%;
+    --chat-message-assistant-foreground: 240 10% 3.9%;
+    --chat-input: 0 0% 100%;
+    --chat-input-border: 220 13% 91%;
+    --chat-input-focus: 217 91% 60%;
+
+    /* Standard UI colors */
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 220 14.3% 95.9%;
+    --secondary-foreground: 220.9 39.3% 11%;
+
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+
+    --accent: 220 14.3% 95.9%;
+    --accent-foreground: 220.9 39.3% 11%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 217 91% 60%;
+
+    --radius: 0.75rem;
+
+    /* Animations */
+    --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  .dark {
+    /* Dark theme - Sophisticated and easy on the eyes */
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    
+    /* Chat specific colors - Dark theme */
+    --chat-background: 240 10% 3.9%;
+    --chat-sidebar: 240 5.9% 10%;
+    --chat-message-user: 217 91% 60%;
+    --chat-message-user-foreground: 0 0% 100%;
+    --chat-message-assistant: 240 3.7% 15.9%;
+    --chat-message-assistant-foreground: 0 0% 98%;
+    --chat-input: 240 3.7% 15.9%;
+    --chat-input-border: 240 3.7% 15.9%;
+    --chat-input-focus: 217 91% 60%;
+
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 240 5.9% 10%;
+
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 217 91% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
