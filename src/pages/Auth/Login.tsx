@@ -2,9 +2,29 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
+import { useState } from "react"
+import { useAuth } from "@/hooks/useAuth"
 
 const Login = () => {
+  const { signIn } = useAuth()
+  const navigate = useNavigate()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+
+  const handleLogin = async () => {
+    try {
+      setLoading(true)
+      await signIn(email, password)
+      navigate("/")
+    } catch (e) {
+      // noop for now
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -22,6 +42,8 @@ const Login = () => {
               type="text"
               placeholder="Enter your email or username"
               className="w-full"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div className="space-y-2">
@@ -31,9 +53,11 @@ const Login = () => {
               type="password"
               placeholder="Enter your password"
               className="w-full"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          <Button className="w-full" size="lg">
+          <Button className="w-full" size="lg" onClick={handleLogin} disabled={loading}>
             Login
           </Button>
           <div className="text-center">

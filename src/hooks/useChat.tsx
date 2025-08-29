@@ -1,4 +1,5 @@
-import { useState, useCallback, createContext, useContext } from "react";
+import { useState, useCallback, createContext, useContext, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import type { Message } from "@/components/chat/ChatMessage";
 
@@ -30,6 +31,40 @@ const useChatState = () => {
   // Get active session
   const activeSession = sessions.find(s => s.id === activeSessionId);
   const messages = activeSession?.messages || [];
+
+  const { user } = useAuth();
+
+  // Load sessions per user from localStorage
+  useEffect(() => {
+    if (!user) {
+      setSessions([]);
+      setActiveSessionId(null);
+      return;
+    }
+    const key = `chat:sessions:${user.id}`;
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as ChatSession[];
+        // revive timestamps
+        parsed.forEach(s => { (s as any).timestamp = new Date(s.timestamp); });
+        setSessions(parsed);
+        setActiveSessionId(parsed[0]?.id ?? null);
+      } catch {
+        // ignore
+      }
+    } else {
+      setSessions([]);
+      setActiveSessionId(null);
+    }
+  }, [user]);
+
+  // Persist sessions per user
+  useEffect(() => {
+    if (!user) return;
+    const key = `chat:sessions:${user.id}`;
+    localStorage.setItem(key, JSON.stringify(sessions));
+  }, [sessions, user]);
 
   // Create new chat session
   const createNewSession = useCallback(() => {

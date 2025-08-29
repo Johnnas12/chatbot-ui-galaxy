@@ -2,9 +2,29 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
+import { useState } from "react"
+import { useAuth } from "@/hooks/useAuth"
 
 const Signup = () => {
+  const { signUp } = useAuth()
+  const navigate = useNavigate()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+
+  const handleSignup = async () => {
+    try {
+      setLoading(true)
+      await signUp(email, password)
+      navigate("/")
+    } catch (e) {
+      // noop for now
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -15,15 +35,7 @@ const Signup = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
-              type="text"
-              placeholder="Choose a username"
-              className="w-full"
-            />
-          </div>
+          {/* Username optional in first pass */}
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -31,6 +43,8 @@ const Signup = () => {
               type="email"
               placeholder="Enter your email"
               className="w-full"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div className="space-y-2">
@@ -40,9 +54,11 @@ const Signup = () => {
               type="password"
               placeholder="Create a password"
               className="w-full"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          <Button className="w-full" size="lg">
+          <Button className="w-full" size="lg" onClick={handleSignup} disabled={loading}>
             Create Account
           </Button>
           <div className="text-center">
