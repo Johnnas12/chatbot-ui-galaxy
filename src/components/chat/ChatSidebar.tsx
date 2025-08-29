@@ -3,6 +3,20 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { PlusIcon, MessageSquareIcon, SettingsIcon, FolderIcon, HistoryIcon } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import {
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarSeparator,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar";
 
 interface ChatSession {
   id: string;
@@ -29,87 +43,92 @@ export const ChatSidebar = ({
   onSessionSelect, 
   onNewChat 
 }: ChatSidebarProps) => {
+  const { state } = useSidebar();
   return (
-    <div className="flex h-full w-64 flex-col bg-chat-sidebar border-r border-border">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <h2 className="text-lg font-semibold text-foreground">Navigation</h2>
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          <Button 
-            onClick={onNewChat}
-            size="sm" 
-            variant="ghost"
-            className="h-8 w-8 p-0 hover:bg-muted"
-          >
-            <PlusIcon className="h-4 w-4" />
+    <>
+      <SidebarHeader className="border-b border-border">
+        <div className="flex items-center justify-between px-2">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger />
+            <h2 className="text-sm font-semibold text-foreground">Navigation</h2>
+          </div>
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            <Button 
+              onClick={onNewChat}
+              size="icon" 
+              variant="ghost"
+              className="h-7 w-7 p-0 hover:bg-muted"
+            >
+              <PlusIcon className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Pages</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navigationItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <NavLink to={item.href} className={({ isActive }) => "block"}>
+                    <SidebarMenuButton isActive={location.pathname === item.href}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                  </NavLink>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Recent Chats</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <ScrollArea className="px-1">
+              <div className="space-y-1">
+                {sessions.map((session) => (
+                  <Button
+                    key={session.id}
+                    onClick={() => onSessionSelect(session.id)}
+                    variant={activeSessionId === session.id ? "secondary" : "ghost"}
+                    className="w-full justify-start text-left h-auto p-2"
+                  >
+                    <MessageSquareIcon className="h-4 w-4 mr-2 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{session.title}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {session.timestamp.toLocaleDateString()}
+                      </div>
+                    </div>
+                  </Button>
+                ))}
+                {sessions.length === 0 && (
+                  <div className="text-center text-muted-foreground text-sm py-6">
+                    No chat sessions yet.
+                    <br />
+                    Start a new conversation!
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter className="border-t border-border">
+        <div className="p-2">
+          <Button variant="ghost" className="w-full justify-start">
+            <SettingsIcon className="h-4 w-4 mr-3" />
+            Settings
           </Button>
         </div>
-      </div>
-
-      {/* Navigation */}
-      <div className="p-4 border-b border-border">
-        <nav className="space-y-1">
-          {navigationItems.map((item) => (
-            <NavLink
-              key={item.href}
-              to={item.href}
-              className={({ isActive }) =>
-                `flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-foreground hover:bg-muted"
-                }`
-              }
-            >
-              <item.icon className="h-4 w-4 mr-3" />
-              {item.title}
-            </NavLink>
-          ))}
-        </nav>
-      </div>
-
-      {/* Chat Sessions */}
-      <div className="flex-1 overflow-hidden">
-        <div className="px-4 py-2">
-          <h3 className="text-sm font-medium text-muted-foreground">Recent Chats</h3>
-        </div>
-        <ScrollArea className="flex-1 px-2">
-          <div className="space-y-1">
-            {sessions.map((session) => (
-              <Button
-                key={session.id}
-                onClick={() => onSessionSelect(session.id)}
-                variant={activeSessionId === session.id ? "secondary" : "ghost"}
-                className="w-full justify-start text-left h-auto p-3 hover:bg-muted transition-smooth"
-              >
-                <MessageSquareIcon className="h-4 w-4 mr-3 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{session.title}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {session.timestamp.toLocaleDateString()}
-                  </div>
-                </div>
-              </Button>
-            ))}
-            {sessions.length === 0 && (
-              <div className="text-center text-muted-foreground text-sm py-8">
-                No chat sessions yet.
-                <br />
-                Start a new conversation!
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-      </div>
-
-      {/* Settings */}
-      <div className="p-4 border-t border-border">
-        <Button variant="ghost" className="w-full justify-start">
-          <SettingsIcon className="h-4 w-4 mr-3" />
-          Settings
-        </Button>
-      </div>
-    </div>
+      </SidebarFooter>
+    </>
   );
 };

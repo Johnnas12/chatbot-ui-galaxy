@@ -12,7 +12,7 @@ const endpoints = [
 
 interface ChatAreaProps {
   messages: Message[];
-  onSendMessage: (message: string) => void;
+  onSendMessage: (message: string, endpointKey?: string) => void;
   isLoading?: boolean;
 }
 
@@ -87,7 +87,7 @@ export const ChatArea = ({ messages, onSendMessage, isLoading = false }: ChatAre
 
       {/* Input Area */}
       <ChatInput 
-        onSendMessage={onSendMessage} 
+        onSendMessage={(msg) => onSendMessage(msg, selectedEndpoint)} 
         isLoading={isLoading}
         placeholder="Message your AI assistant..."
       />

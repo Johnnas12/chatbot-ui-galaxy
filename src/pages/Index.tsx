@@ -1,6 +1,6 @@
 import { ChatArea } from "@/components/chat/ChatArea";
 import { AppLayout } from "@/layouts/AppLayout";
-import { useChat } from "@/hooks/useChat";
+import { useChat } from "@/hooks/useChat.tsx";
 
 const Index = () => {
   const {
