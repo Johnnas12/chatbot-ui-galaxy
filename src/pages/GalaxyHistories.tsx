@@ -21,6 +21,7 @@ import {
   ChevronDownIcon
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import FileUploadForm from "./FileUploadForm";
 
 const GalaxyHistories = () => {
   const { user } = useAuth()
@@ -305,6 +306,8 @@ const GalaxyHistories = () => {
               filteredHistories.map((history) => (
                 <Card key={history.id} className="hover:shadow-md transition-shadow">
                   <CardHeader className="pb-3">
+                    {/* File Upload Section */}
+                    <FileUploadForm historyId={history.id} />
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <Button

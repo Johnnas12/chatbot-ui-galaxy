@@ -242,6 +242,52 @@ export const useGalaxy = () => {
     await fetchHistoryContents(history.id);
   }, [fetchHistoryContents]);
 
+    // Upload file to a history
+    const uploadFileToHistory = useCallback(
+      async (historyId: string, file: File) => {
+        if (!bearerToken || !config?.baseUrl) {
+          toast({
+            title: "Error",
+            description: "Not connected to Galaxy.",
+            variant: "destructive",
+          });
+          return null;
+        }
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
+          const response = await fetch(`${config.baseUrl}/api/histories/${historyId}/upload-file`, {
+            method: "POST",
+            headers: {
+              "accept": "application/json",
+              "USER-API-TOKEN": bearerToken,
+              // Do NOT set Content-Type, browser will set it for multipart
+            },
+            body: formData,
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data?.message || "Upload failed");
+          }
+          toast({
+            title: "File Uploaded",
+            description: data?.message || "File uploaded successfully.",
+          });
+          // Optionally refresh contents
+          await fetchHistoryContents(historyId);
+          return data;
+        } catch (error) {
+          toast({
+            title: "Upload Error",
+            description: error instanceof Error ? error.message : "Failed to upload file.",
+            variant: "destructive",
+          });
+          return null;
+        }
+      },
+      [bearerToken, config?.baseUrl, fetchHistoryContents]
+    );
+
   return {
     // State
     isConnected,
@@ -258,5 +304,6 @@ export const useGalaxy = () => {
     fetchHistoryContents,
     createHistory,
     selectHistory,
+    uploadFileToHistory,
   };
 };
