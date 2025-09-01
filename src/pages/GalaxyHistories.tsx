@@ -18,7 +18,8 @@ import {
   RefreshCwIcon,
   ExternalLinkIcon,
   ChevronRightIcon,
-  ChevronDownIcon
+  ChevronDownIcon,
+  DownloadIcon
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import FileUploadForm from "./FileUploadForm";
@@ -39,6 +40,8 @@ const GalaxyHistories = () => {
     fetchHistories,
     createHistory,
     selectHistory,
+    downloadDataset,
+    downloadCollection
   } = useGalaxy()
 
   const [searchTerm, setSearchTerm] = useState("")
@@ -50,6 +53,7 @@ const GalaxyHistories = () => {
     apiKey: ""
   })
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null)
+  const [downloadingIds, setDownloadingIds] = useState<string[]>([])
 
   // Filter histories based on search term
   const filteredHistories = useMemo(() => {
@@ -89,6 +93,20 @@ const GalaxyHistories = () => {
 
   const toggleHistoryExpansion = (historyId: string) => {
     setExpandedHistory(expandedHistory === historyId ? null : historyId)
+  }
+
+  // Download handler for dataset or collection
+  const handleDownload = async (type: "dataset" | "collection", id: string) => {
+    setDownloadingIds(prev => [...prev, id])
+    try {
+      if (type === "dataset") {
+        await downloadDataset(id)
+      } else {
+        await downloadCollection(id)
+      }
+    } finally {
+      setDownloadingIds(prev => prev.filter(did => did !== id))
+    }
   }
 
   if (!user) {
@@ -340,7 +358,6 @@ const GalaxyHistories = () => {
                       </div>
                     </div>
                   </CardHeader>
-                  
                   {/* Expanded Content */}
                   {expandedHistory === history.id && (
                     <CardContent className="pt-0">
@@ -361,7 +378,22 @@ const GalaxyHistories = () => {
                                         <p className="font-medium text-sm">{dataset.name}</p>
                                         <p className="text-xs text-muted-foreground">ID: {dataset.id}</p>
                                       </div>
-                                      <Badge variant="secondary">{dataset.type}</Badge>
+                                      <div className="flex items-center gap-2">
+                                        <Badge variant="secondary">{dataset.type}</Badge>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          title="Download Dataset"
+                                          onClick={() => handleDownload("dataset", dataset.id)}
+                                          disabled={downloadingIds.includes(dataset.id)}
+                                        >
+                                          {downloadingIds.includes(dataset.id) ? (
+                                            <RefreshCwIcon className="h-4 w-4 animate-spin" />
+                                          ) : (
+                                            <DownloadIcon className="h-4 w-4" />
+                                          )}
+                                        </Button>
+                                      </div>
                                     </div>
                                   ))}
                                 </div>
@@ -382,7 +414,22 @@ const GalaxyHistories = () => {
                                         <p className="font-medium text-sm">{collection.name}</p>
                                         <p className="text-xs text-muted-foreground">ID: {collection.id}</p>
                                       </div>
-                                      <Badge variant="secondary">{collection.type}</Badge>
+                                      <div className="flex items-center gap-2">
+                                        <Badge variant="secondary">{collection.type}</Badge>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          title="Download Collection"
+                                          onClick={() => handleDownload("collection", collection.id)}
+                                          disabled={downloadingIds.includes(collection.id)}
+                                        >
+                                          {downloadingIds.includes(collection.id) ? (
+                                            <RefreshCwIcon className="h-4 w-4 animate-spin" />
+                                          ) : (
+                                            <DownloadIcon className="h-4 w-4" />
+                                          )}
+                                        </Button>
+                                      </div>
                                     </div>
                                   ))}
                                 </div>

@@ -342,6 +342,76 @@ export const useGalaxy = () => {
         [bearerToken, config?.baseUrl, fetchHistoryContents]
       );
 
+  // Download a dataset by id
+  const downloadDataset = useCallback(async (datasetId: string) => {
+    if (!config?.baseUrl || !bearerToken) {
+      toast({ title: "Error", description: "Missing Galaxy config or token", variant: "destructive" });
+      return;
+    }
+    const url = `${config.baseUrl}/api/histories/download?dataset_ids=${datasetId}`;
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "accept": "*/*",
+          "USER-API-TOKEN": bearerToken,
+        },
+      });
+      if (!response.ok) throw new Error("Download failed");
+      const blob = await response.blob();
+      const disposition = response.headers.get("content-disposition");
+      let filename = "downloaded_file";
+      if (disposition) {
+        const match = disposition.match(/filename="(.+)"/);
+        if (match) filename = match[1];
+      }
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast({ title: "Download Started", description: filename });
+    } catch (error) {
+      toast({ title: "Download Error", description: error instanceof Error ? error.message : "Failed to download.", variant: "destructive" });
+    }
+  }, [config, bearerToken]);
+
+  // Download a collection by id
+  const downloadCollection = useCallback(async (collectionId: string) => {
+    if (!config?.baseUrl || !bearerToken) {
+      toast({ title: "Error", description: "Missing Galaxy config or token", variant: "destructive" });
+      return;
+    }
+    const url = `${config.baseUrl}/api/histories/download?collection_ids=${collectionId}`;
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "accept": "*/*",
+          "USER-API-TOKEN": bearerToken,
+        },
+      });
+      if (!response.ok) throw new Error("Download failed");
+      const blob = await response.blob();
+      const disposition = response.headers.get("content-disposition");
+      let filename = "downloaded_file";
+      if (disposition) {
+        const match = disposition.match(/filename="(.+)"/);
+        if (match) filename = match[1];
+      }
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast({ title: "Download Started", description: filename });
+    } catch (error) {
+      toast({ title: "Download Error", description: error instanceof Error ? error.message : "Failed to download.", variant: "destructive" });
+    }
+  }, [config, bearerToken]);
+
   return {
     // State
     isConnected,
@@ -360,5 +430,7 @@ export const useGalaxy = () => {
     selectHistory,
     uploadFileToHistory,
     uploadCollectionToHistory,
+    downloadDataset,
+    downloadCollection,
   };
 };
