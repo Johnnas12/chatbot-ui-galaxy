@@ -288,6 +288,60 @@ export const useGalaxy = () => {
       [bearerToken, config?.baseUrl, fetchHistoryContents]
     );
 
+      // Upload collection to a history
+      const uploadCollectionToHistory = useCallback(
+        async (
+          historyId: string,
+          files: File[],
+          collectionType: string,
+          collectionName: string,
+          structure: string
+        ) => {
+          if (!bearerToken || !config?.baseUrl) {
+            toast({
+              title: "Error",
+              description: "Not connected to Galaxy.",
+              variant: "destructive",
+            });
+            return null;
+          }
+          try {
+            const formData = new FormData();
+            files.forEach(file => formData.append("files", file));
+            formData.append("collection_type", collectionType);
+            formData.append("collection_name", collectionName);
+            formData.append("structure", structure);
+            const response = await fetch(`${config.baseUrl}/api/histories/${historyId}/upload-collection`, {
+              method: "POST",
+              headers: {
+                "accept": "application/json",
+                "USER-API-TOKEN": bearerToken,
+                // Do NOT set Content-Type, browser will set it for multipart
+              },
+              body: formData,
+            });
+            const data = await response.json();
+            if (!response.ok) {
+              throw new Error(data?.message || "Upload failed");
+            }
+            toast({
+              title: "Collection Uploaded",
+              description: `Collection '${collectionName}' uploaded successfully.`,
+            });
+            await fetchHistoryContents(historyId);
+            return data;
+          } catch (error) {
+            toast({
+              title: "Upload Error",
+              description: error instanceof Error ? error.message : "Failed to upload collection.",
+              variant: "destructive",
+            });
+            return null;
+          }
+        },
+        [bearerToken, config?.baseUrl, fetchHistoryContents]
+      );
+
   return {
     // State
     isConnected,
@@ -305,5 +359,6 @@ export const useGalaxy = () => {
     createHistory,
     selectHistory,
     uploadFileToHistory,
+    uploadCollectionToHistory,
   };
 };

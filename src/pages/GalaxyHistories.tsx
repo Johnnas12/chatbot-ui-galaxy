@@ -22,6 +22,8 @@ import {
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import FileUploadForm from "./FileUploadForm";
+import CollectionUploadForm from "./CollectionUploadForm";
+import { useRef } from "react";
 
 const GalaxyHistories = () => {
   const { user } = useAuth()
@@ -306,8 +308,6 @@ const GalaxyHistories = () => {
               filteredHistories.map((history) => (
                 <Card key={history.id} className="hover:shadow-md transition-shadow">
                   <CardHeader className="pb-3">
-                    {/* File Upload Section */}
-                    <FileUploadForm historyId={history.id} />
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <Button
@@ -336,8 +336,6 @@ const GalaxyHistories = () => {
                           onClick={() => selectHistory(history)}
                           className="flex items-center gap-1"
                         >
-                          <ExternalLinkIcon className="h-3 w-3" />
-                          View Contents
                         </Button>
                       </div>
                     </div>
@@ -396,6 +394,22 @@ const GalaxyHistories = () => {
                                 No datasets or collections found in this history.
                               </p>
                             )}
+                            <h4 className="font-medium mb-2 flex items-center gap-2">
+                              <FolderIcon className="h-4 w-4" />
+                                  Upload Collection
+                                   {/* Collection Upload Section */}
+                                   <CollectionUploadForm historyId={history.id} />
+                            </h4>
+
+                            <h4 className="font-medium mb-2 flex items-center gap-2">
+                              <FolderIcon className="h-4 w-4" />
+                                  Upload Dataset
+                                   {/* Collection Upload Section */}
+                                    <FileUploadForm historyId={history.id} />
+                            </h4>
+                             {/* File Upload Section */}
+                          
+                           
                           </div>
                         ) : (
                           <div className="text-center py-4">
