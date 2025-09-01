@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn, ensureDate } from "@/lib/utils";
 import { BotIcon, UserIcon } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
@@ -6,7 +6,7 @@ export interface Message {
   id: string;
   content: string;
   role: "user" | "assistant";
-  timestamp: Date;
+  timestamp: Date | string;
 }
 
 interface ChatMessageProps {
@@ -42,7 +42,7 @@ export const ChatMessage = ({ message }: ChatMessageProps) => {
             {isUser ? "You" : "Assistant"}
           </span>
           <span className="text-xs text-muted-foreground">
-            {message.timestamp.toLocaleTimeString()}
+            {ensureDate(message.timestamp).toLocaleTimeString()}
           </span>
         </div>
         <div className="prose prose-sm max-w-none text-foreground">

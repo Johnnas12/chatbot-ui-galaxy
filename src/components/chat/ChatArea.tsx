@@ -14,9 +14,10 @@ interface ChatAreaProps {
   messages: Message[];
   onSendMessage: (message: string, endpointKey?: string) => void;
   isLoading?: boolean;
+  hasActiveSession?: boolean;
 }
 
-export const ChatArea = ({ messages, onSendMessage, isLoading = false }: ChatAreaProps) => {
+export const ChatArea = ({ messages, onSendMessage, isLoading = false, hasActiveSession = false }: ChatAreaProps) => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [selectedEndpoint, setSelectedEndpoint] = useState("tool-suggest");
@@ -49,7 +50,16 @@ export const ChatArea = ({ messages, onSendMessage, isLoading = false }: ChatAre
       {/* Messages Area */}
       <ScrollArea className="flex-1" ref={scrollAreaRef}>
         <div className="space-y-0">
-          {messages.length === 0 ? (
+          {!hasActiveSession ? (
+            <div className="flex h-full items-center justify-center p-8">
+              <div className="text-center text-muted-foreground">
+                <h3 className="text-lg font-medium mb-2">No active chat session</h3>
+                <p className="text-sm">
+                  Click the "+" button in the sidebar to start a new conversation.
+                </p>
+              </div>
+            </div>
+          ) : messages.length === 0 ? (
             <div className="flex h-full items-center justify-center p-8">
               <div className="text-center text-muted-foreground">
                 <h3 className="text-lg font-medium mb-2">Start a conversation</h3>
@@ -90,6 +100,7 @@ export const ChatArea = ({ messages, onSendMessage, isLoading = false }: ChatAre
         onSendMessage={(msg) => onSendMessage(msg, selectedEndpoint)} 
         isLoading={isLoading}
         placeholder="Message your AI assistant..."
+        disabled={!hasActiveSession}
       />
     </div>
   );

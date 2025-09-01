@@ -19,12 +19,15 @@ const AppLayoutInner = ({ children }: AppLayoutProps) => {
     createNewSession,
     selectSession,
     initializeChat,
+    isInitialized,
   } = useChat();
 
-  // Initialize chat on component mount
+  // Initialize chat on component mount only once
   useEffect(() => {
-    initializeChat();
-  }, [initializeChat]);
+    if (!isInitialized) {
+      initializeChat();
+    }
+  }, [initializeChat, isInitialized]);
 
   return (
     <SidebarProvider>

@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Link, useNavigate } from "react-router-dom"
 import { useState } from "react"
 import { useAuth } from "@/hooks/useAuth"
+import { toast } from "@/hooks/use-toast"
 
 const Login = () => {
   const { signIn } = useAuth()
@@ -14,14 +15,38 @@ const Login = () => {
   const [loading, setLoading] = useState(false)
 
   const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter both email and password",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setLoading(true)
       await signIn(email, password)
+      toast({
+        title: "Success",
+        description: "Successfully logged in!",
+      });
       navigate("/")
-    } catch (e) {
-      // noop for now
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast({
+        title: "Login Failed",
+        description: error?.message || "Invalid email or password. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleLogin();
     }
   }
 
@@ -44,6 +69,8 @@ const Login = () => {
               className="w-full"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onKeyPress={handleKeyPress}
+              disabled={loading}
             />
           </div>
           <div className="space-y-2">
@@ -55,10 +82,12 @@ const Login = () => {
               className="w-full"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onKeyPress={handleKeyPress}
+              disabled={loading}
             />
           </div>
           <Button className="w-full" size="lg" onClick={handleLogin} disabled={loading}>
-            Login
+            {loading ? "Logging in..." : "Login"}
           </Button>
           <div className="text-center">
             <span className="text-sm text-muted-foreground">

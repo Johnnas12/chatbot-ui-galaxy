@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Link, useNavigate } from "react-router-dom"
 import { useState } from "react"
 import { useAuth } from "@/hooks/useAuth"
+import { toast } from "@/hooks/use-toast"
 
 const Signup = () => {
   const { signUp } = useAuth()
@@ -14,14 +15,47 @@ const Signup = () => {
   const [loading, setLoading] = useState(false)
 
   const handleSignup = async () => {
+    if (!email.trim() || !password.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter both email and password",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({
+        title: "Validation Error",
+        description: "Password must be at least 6 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setLoading(true)
       await signUp(email, password)
+      toast({
+        title: "Success",
+        description: "Account created successfully! Please check your email to verify your account.",
+      });
       navigate("/")
-    } catch (e) {
-      // noop for now
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      toast({
+        title: "Signup Failed",
+        description: error?.message || "Failed to create account. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSignup();
     }
   }
 
@@ -45,6 +79,8 @@ const Signup = () => {
               className="w-full"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onKeyPress={handleKeyPress}
+              disabled={loading}
             />
           </div>
           <div className="space-y-2">
@@ -56,10 +92,12 @@ const Signup = () => {
               className="w-full"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onKeyPress={handleKeyPress}
+              disabled={loading}
             />
           </div>
           <Button className="w-full" size="lg" onClick={handleSignup} disabled={loading}>
-            Create Account
+            {loading ? "Creating Account..." : "Create Account"}
           </Button>
           <div className="text-center">
             <span className="text-sm text-muted-foreground">

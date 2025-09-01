@@ -7,17 +7,19 @@ interface ChatInputProps {
   onSendMessage: (message: string) => void;
   isLoading?: boolean;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 export const ChatInput = ({ 
   onSendMessage, 
   isLoading = false,
-  placeholder = "Type your message..." 
+  placeholder = "Type your message...",
+  disabled = false
 }: ChatInputProps) => {
   const [message, setMessage] = useState("");
 
   const handleSend = () => {
-    if (message.trim() && !isLoading) {
+    if (message.trim() && !isLoading && !disabled) {
       onSendMessage(message.trim());
       setMessage("");
     }
@@ -38,15 +40,15 @@ export const ChatInput = ({
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            disabled={isLoading}
+            placeholder={disabled ? "Create a new chat session to start messaging..." : placeholder}
+            disabled={isLoading || disabled}
             className="min-h-[60px] max-h-[200px] resize-none bg-chat-input border-chat-input-border focus:border-chat-input-focus focus:ring-chat-input-focus transition-smooth"
             rows={1}
           />
         </div>
         <Button
           onClick={handleSend}
-          disabled={!message.trim() || isLoading}
+          disabled={!message.trim() || isLoading || disabled}
           size="icon"
           className="h-[60px] w-[60px] shrink-0 bg-primary hover:bg-primary/90 transition-smooth"
         >

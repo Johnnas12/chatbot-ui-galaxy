@@ -1,6 +1,8 @@
 import { useState, useCallback, createContext, useContext, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import { ensureDate } from "@/lib/utils";
 import type { Message } from "@/components/chat/ChatMessage";
 
 // Configuration for your local model API
@@ -21,12 +23,14 @@ interface ChatSession {
   title: string;
   timestamp: Date;
   messages: Message[];
+  user_id: string;
 }
 
 const useChatState = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Get active session
   const activeSession = sessions.find(s => s.id === activeSessionId);
@@ -34,52 +38,146 @@ const useChatState = () => {
 
   const { user } = useAuth();
 
-  // Load sessions per user from localStorage
+  // Load sessions from Supabase when user changes
   useEffect(() => {
     if (!user) {
       setSessions([]);
       setActiveSessionId(null);
+      setIsInitialized(false);
       return;
     }
-    const key = `chat:sessions:${user.id}`;
-    const raw = localStorage.getItem(key);
-    if (raw) {
+
+    const loadSessions = async () => {
       try {
-        const parsed = JSON.parse(raw) as ChatSession[];
-        // revive timestamps
-        parsed.forEach(s => { (s as any).timestamp = new Date(s.timestamp); });
-        setSessions(parsed);
-        setActiveSessionId(parsed[0]?.id ?? null);
-      } catch {
-        // ignore
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from('chat_sessions')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('timestamp', { ascending: false });
+
+        if (error) {
+          console.error('Error loading sessions:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load chat sessions",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const loadedSessions = data.map(session => ({
+          ...session,
+          timestamp: ensureDate(session.timestamp),
+          messages: (session.messages || []).map((msg: any) => ({
+            ...msg,
+            timestamp: ensureDate(msg.timestamp)
+          }))
+        }));
+
+        setSessions(loadedSessions);
+        setActiveSessionId(loadedSessions[0]?.id ?? null);
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Error loading sessions:', error);
+      } finally {
+        setIsLoading(false);
       }
-    } else {
-      setSessions([]);
-      setActiveSessionId(null);
-    }
+    };
+
+    loadSessions();
   }, [user]);
 
-  // Persist sessions per user
+  // Subscribe to real-time updates for chat sessions
   useEffect(() => {
     if (!user) return;
-    const key = `chat:sessions:${user.id}`;
-    localStorage.setItem(key, JSON.stringify(sessions));
-  }, [sessions, user]);
+
+    const channel = supabase
+      .channel('chat_sessions')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_sessions',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+                                           if (payload.eventType === 'INSERT') {
+              const newSession = {
+                ...payload.new,
+                timestamp: ensureDate(payload.new.timestamp),
+                messages: (payload.new.messages || []).map((msg: any) => ({
+                  ...msg,
+                  timestamp: ensureDate(msg.timestamp)
+                }))
+              };
+              setSessions(prev => [newSession, ...prev]);
+            } else if (payload.eventType === 'UPDATE') {
+              const updatedSession = {
+                ...payload.new,
+                timestamp: ensureDate(payload.new.timestamp),
+                messages: (payload.new.messages || []).map((msg: any) => ({
+                  ...msg,
+                  timestamp: ensureDate(msg.timestamp)
+                }))
+              };
+             setSessions(prev => prev.map(session => 
+               session.id === updatedSession.id ? updatedSession : session
+             ));
+                       } else if (payload.eventType === 'DELETE') {
+              setSessions(prev => {
+                const updatedSessions = prev.filter(session => session.id !== payload.old.id);
+                // If we deleted the active session, select the first available session
+                if (activeSessionId === payload.old.id) {
+                  setActiveSessionId(updatedSessions[0]?.id ?? null);
+                }
+                return updatedSessions;
+              });
+            }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, activeSessionId, sessions]);
 
   // Create new chat session
-  const createNewSession = useCallback(() => {
-    const newId = Date.now().toString();
-    const newSession: ChatSession = {
-      id: newId,
+  const createNewSession = useCallback(async () => {
+    if (!user) return null;
+
+    const newId = crypto.randomUUID();
+    const newSession: Omit<ChatSession, 'id'> = {
       title: "New Chat",
       timestamp: new Date(),
       messages: [],
+      user_id: user.id,
     };
 
-    setSessions(prev => [newSession, ...prev]);
-    setActiveSessionId(newId);
-    return newId;
-  }, []);
+    try {
+      const { error } = await supabase
+        .from('chat_sessions')
+        .insert([{ id: newId, ...newSession }]);
+
+      if (error) {
+        console.error('Error creating session:', error);
+        toast({
+          title: "Error",
+          description: "Failed to create new chat session",
+          variant: "destructive",
+        });
+        return null;
+      }
+
+      setActiveSessionId(newId);
+      return newId;
+    } catch (error) {
+      console.error('Error creating session:', error);
+      return null;
+    }
+  }, [user]);
 
   // Select a session
   const selectSession = useCallback((sessionId: string) => {
@@ -87,39 +185,62 @@ const useChatState = () => {
   }, []);
 
   // Update session title based on first message
-  const updateSessionTitle = useCallback((sessionId: string, title: string) => {
+  const updateSessionTitle = useCallback(async (sessionId: string, title: string) => {
+    if (!user) return;
+
     const trimmed = title.trim().replace(/\s+/g, " ");
-    setSessions(prev => prev.map(session => 
-      session.id === sessionId 
-        ? { ...session, title: trimmed.slice(0, 50) + (trimmed.length > 50 ? '...' : '') }
-        : session
-    ));
-  }, []);
+    const newTitle = trimmed.slice(0, 50) + (trimmed.length > 50 ? '...' : '');
+
+    try {
+      const { error } = await supabase
+        .from('chat_sessions')
+        .update({ title: newTitle })
+        .eq('id', sessionId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error updating session title:', error);
+      }
+    } catch (error) {
+      console.error('Error updating session title:', error);
+    }
+  }, [user]);
 
   // Send message to your local model
   const sendMessage = useCallback(async (content: string, endpointKey?: string) => {
+    if (!user) return;
+
     // Ensure there is an active session and capture the id synchronously
-    const sessionId = activeSessionId ?? createNewSession();
+    const sessionId = activeSessionId ?? await createNewSession();
+    if (!sessionId) return;
 
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       content: content.trim(),
       role: "user",
       timestamp: new Date(),
     };
 
-    // Add user message immediately and set title if first message (in the same update to avoid stale state)
-    setSessions(prev => prev.map(session => {
-      if (session.id !== sessionId) return session;
-      const isFirstMessage = session.messages.length === 0;
-      const updatedMessages = [...session.messages, userMessage];
-      if (isFirstMessage) {
-        const trimmed = content.trim().replace(/\s+/g, " ");
-        const newTitle = trimmed.slice(0, 50) + (trimmed.length > 50 ? "..." : "");
-        return { ...session, title: newTitle, messages: updatedMessages };
+    // Add user message immediately
+    const updatedMessages = [...(activeSession?.messages || []), userMessage];
+    
+    try {
+      // Update session with new message
+      const { error } = await supabase
+        .from('chat_sessions')
+        .update({ 
+          messages: updatedMessages,
+          title: activeSession?.messages.length === 0 ? content.trim().slice(0, 50) + (content.length > 50 ? '...' : '') : activeSession.title
+        })
+        .eq('id', sessionId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error updating session:', error);
       }
-      return { ...session, messages: updatedMessages };
-    }));
+    } catch (error) {
+      console.error('Error updating session:', error);
+    }
 
     setIsLoading(true);
 
@@ -131,10 +252,10 @@ const useChatState = () => {
         headers: {
           "Content-Type": "application/json",
         },
-          body: JSON.stringify({
-            query: content, // Send only the user's message as a string
-            top_k: 5,       // Optional: add top_k if needed by your API
-          }),
+        body: JSON.stringify({
+          query: content, // Send only the user's message as a string
+          top_k: 5,       // Optional: add top_k if needed by your API
+        }),
       });
 
       if (!response.ok) {
@@ -150,18 +271,24 @@ const useChatState = () => {
         || "Sorry, I couldn't process your request.";
 
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: crypto.randomUUID(),
         content: assistantContent,
         role: "assistant",
         timestamp: new Date(),
       };
 
-      // Add assistant message
-      setSessions(prev => prev.map(session => 
-        session.id === sessionId
-          ? { ...session, messages: [...session.messages, assistantMessage] }
-          : session
-      ));
+      // Add assistant message to database
+      const finalMessages = [...updatedMessages, assistantMessage];
+      
+      const { error } = await supabase
+        .from('chat_sessions')
+        .update({ messages: finalMessages })
+        .eq('id', sessionId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error updating session with assistant message:', error);
+      }
 
     } catch (error) {
       console.error("Error calling local model:", error);
@@ -172,30 +299,79 @@ const useChatState = () => {
         variant: "destructive",
       });
 
-      // Add error message
+      // Add error message to database
       const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: crypto.randomUUID(),
         content: "I'm sorry, but I'm having trouble connecting to the local model. Please check that your model is running and the API configuration is correct.",
         role: "assistant",
         timestamp: new Date(),
       };
 
-      setSessions(prev => prev.map(session => 
-        session.id === sessionId
-          ? { ...session, messages: [...session.messages, errorMessage] }
-          : session
-      ));
+      const finalMessages = [...updatedMessages, errorMessage];
+      
+      const { error: updateError } = await supabase
+        .from('chat_sessions')
+        .update({ messages: finalMessages })
+        .eq('id', sessionId)
+        .eq('user_id', user.id);
+
+      if (updateError) {
+        console.error('Error updating session with error message:', updateError);
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [activeSessionId, createNewSession]);
+  }, [activeSessionId, createNewSession, user, activeSession]);
 
-  // Initialize with a default session if none exist
-  const initializeChat = useCallback(() => {
-    if (sessions.length === 0) {
-      createNewSession();
+  // Delete a session
+  const deleteSession = useCallback(async (sessionId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('chat_sessions')
+        .delete()
+        .eq('id', sessionId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error deleting session:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete chat session",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Update local state immediately for better UX
+      setSessions(prev => prev.filter(session => session.id !== sessionId));
+      
+      // If we deleted the active session, select the first available session
+      if (activeSessionId === sessionId) {
+        const remainingSessions = sessions.filter(session => session.id !== sessionId);
+        setActiveSessionId(remainingSessions[0]?.id ?? null);
+      }
+
+      toast({
+        title: "Success",
+        description: "Chat session deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete chat session",
+        variant: "destructive",
+      });
     }
-  }, [sessions.length, createNewSession]);
+  }, [user, activeSessionId, sessions]);
+
+  // Initialize chat (no automatic session creation)
+  const initializeChat = useCallback(async () => {
+    if (!user || isInitialized) return;
+    // Do nothing - let users manually create sessions when they want to
+  }, [user, isInitialized]);
 
   return {
     sessions,
@@ -205,7 +381,9 @@ const useChatState = () => {
     sendMessage,
     createNewSession,
     selectSession,
+    deleteSession,
     initializeChat,
+    isInitialized,
   };
 };
 
